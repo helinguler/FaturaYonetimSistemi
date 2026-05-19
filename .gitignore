@@ -1,0 +1,22 @@
+# .NET
+**/bin/
+**/obj/
+
+# Node / Angular
+**/node_modules/
+**/.angular/
+**/dist/
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Env
+.env

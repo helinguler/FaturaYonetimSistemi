@@ -58,16 +58,7 @@ public class AuthController : ControllerBase
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
 
-        // jwt token üretme
-        var token = _jwtTokenService.GenerateToken(user, out var expiresAt);
-
-        return Ok(new AuthResponse
-        {
-            Token = token,
-            ExpiresAt = expiresAt,
-            UserId = user.UserId,
-            UserName = user.UserName
-        });
+        return Ok(await CreateAuthResponse(user));
     }
 
     // Login Method
@@ -97,15 +88,89 @@ public class AuthController : ControllerBase
             return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
         }
 
-        // jwt token üretme
-        var token = _jwtTokenService.GenerateToken(user, out var expiresAt);
+        return Ok(await CreateAuthResponse(user));
+    }
 
-        return Ok(new AuthResponse
+    // yeni access token + yeni refresh token üretme
+    [HttpPost("refresh")]   // endpoint
+    public async Task<ActionResult<AuthResponse>> Refresh(RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
         {
-            Token = token,
+            return BadRequest("Refresh token gereklidir.");
+        }
+
+        var tokenHash = _jwtTokenService.HashRefreshToken(request.RefreshToken);    // gelen token hashlenir
+
+        var storedToken = await _dbContext.RefreshTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
+
+        if (storedToken is null || !storedToken.IsActive)
+        {
+            return Unauthorized("Geçersiz veya süresi dolmuş refresh token.");
+        }
+
+        storedToken.RevokedAt = DateTime.UtcNow;    // eski refresh tokenın iptali
+
+        return Ok(await CreateAuthResponse(storedToken.User));
+    }
+
+    // refresh tokenı iptal etme
+    [HttpPost("revoke")]    // endpoint
+    public async Task<IActionResult> Revoke(RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest("Refresh token gereklidir.");
+        }
+
+        var tokenHash = _jwtTokenService.HashRefreshToken(request.RefreshToken);    // token hashlenir
+
+        var storedToken = await _dbContext.RefreshTokens
+            .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
+
+        if (storedToken is null)
+        {
+            return Ok();
+        }
+
+        if (!storedToken.IsRevoked)
+        {
+            storedToken.RevokedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+        }
+
+        return Ok();
+    }
+
+    // access token + refresh token üretip response dönme
+    private async Task<AuthResponse> CreateAuthResponse(AppUser user)
+    {
+        var accessToken = _jwtTokenService.GenerateAccessToken(user, out var expiresAt);
+
+        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+        var refreshTokenHash = _jwtTokenService.HashRefreshToken(refreshToken);
+
+        // yeni refresh token kaydı
+        var refreshTokenEntity = new RefreshToken
+        {
+            UserId = user.UserId,
+            TokenHash = refreshTokenHash,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(7)
+        };
+
+        _dbContext.RefreshTokens.Add(refreshTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Token = accessToken,
+            RefreshToken = refreshToken,
             ExpiresAt = expiresAt,
             UserId = user.UserId,
             UserName = user.UserName
-        });
+        };
     }
 }

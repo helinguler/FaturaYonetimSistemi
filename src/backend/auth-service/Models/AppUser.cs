@@ -10,4 +10,7 @@ public class AppUser
     public string PasswordHash { get; set; } = string.Empty;    // passwordun hashlenmiş hali
 
     public DateTime RecordDate { get; set; } = DateTime.UtcNow;
+
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
 }

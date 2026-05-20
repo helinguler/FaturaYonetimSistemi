@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using AuthService.Models;
 using Microsoft.IdentityModel.Tokens;
@@ -20,7 +21,7 @@ public class JwtTokenService
 
 
     // kullanıcıya ait JWT tokenı üretme
-    public string GenerateToken(AppUser user, out DateTime expiresAt)
+    public string GenerateAccessToken(AppUser user, out DateTime expiresAt)
     {
         // gizli keyin kısa veya zayıf olmaması için güvenlik önlemi
         var jwtSecret = _configuration["Jwt:Secret"];
@@ -56,5 +57,22 @@ public class JwtTokenService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    // random refresh token üretme
+    public string GenerateRefreshToken()
+    {
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes);
+    }
+
+    // refresh tokenın hash değerini üretme
+    public string HashRefreshToken(string refreshToken)
+    {
+        using var sha256 = SHA256.Create();
+        var tokenBytes = Encoding.UTF8.GetBytes(refreshToken);
+        var hashBytes = sha256.ComputeHash(tokenBytes);
+
+        return Convert.ToBase64String(hashBytes);
     }
 }

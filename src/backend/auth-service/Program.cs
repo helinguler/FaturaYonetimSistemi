@@ -33,7 +33,7 @@ var jwtSecret = builder.Configuration["Jwt:Secret"];
 
 if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
 {
-    throw new InvalidOperationException("JWT secret must be at least 32 characters.");
+    throw new InvalidOperationException("JWT secret en az 32 karakter uzunluğunda olmalıdır.");
 }
 
 // Authentication işlemi JWT Bearer token ile yapma

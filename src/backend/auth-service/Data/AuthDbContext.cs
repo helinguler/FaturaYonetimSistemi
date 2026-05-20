@@ -14,6 +14,8 @@ public class AuthDbContext : DbContext
     // AppUser entitysi için db table kullanılıyor
     public DbSet<AppUser> Users => Set<AppUser>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AppUser>(entity =>
@@ -35,6 +37,33 @@ public class AuthDbContext : DbContext
 
             entity.Property(x => x.RecordDate)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshTokens");
+
+            entity.HasKey(x => x.RefreshTokenId);
+
+            entity.Property(x => x.TokenHash)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            entity.Property(x => x.ExpiresAt)
+                .IsRequired();
+
+            entity.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique();
+
+            entity.HasIndex(x => x.UserId);
+
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.RefreshTokens)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

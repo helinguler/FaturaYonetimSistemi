@@ -102,6 +102,12 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+    dbContext.Database.Migrate();
+}
+
 app.MapControllers();
 
 app.Run();

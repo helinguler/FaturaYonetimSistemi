@@ -23,6 +23,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-postgres_admin} -d ${POSTGRES_DB:-invoice_root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   pgadmin:
     image: dpage/pgadmin4
@@ -33,9 +38,93 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: src/backend/auth-service/Dockerfile
+    container_name: auth_service
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${AUTH_DB_NAME:-auth_db};Username=${AUTH_DB_USER:-auth_user};Password=${AUTH_DB_PASSWORD:-auth_pass_123}
+      Jwt__Secret: ${JWT_SECRET:-THIS_IS_A_DEVELOPMENT_SECRET_KEY_CHANGE_ME_123456789}
+      Jwt__Issuer: ${JWT_ISSUER:-InvoiceManagementProject}
+      Jwt__Audience: ${JWT_AUDIENCE:-InvoiceManagementProjectUsers}
+    ports:
+      - "5001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: src/backend/customer-service/Dockerfile
+    container_name: customer_service
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${CUSTOMER_DB_NAME:-customer_db};Username=${CUSTOMER_DB_USER:-customer_user};Password=${CUSTOMER_DB_PASSWORD:-customer_pass_123}
+      Jwt__Secret: ${JWT_SECRET:-THIS_IS_A_DEVELOPMENT_SECRET_KEY_CHANGE_ME_123456789}
+      Jwt__Issuer: ${JWT_ISSUER:-InvoiceManagementProject}
+      Jwt__Audience: ${JWT_AUDIENCE:-InvoiceManagementProjectUsers}
+    ports:
+      - "5002:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  invoice-service:
+    build:
+      context: .
+      dockerfile: src/backend/invoice-service/Dockerfile
+    container_name: invoice_service
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${INVOICE_DB_NAME:-invoice_db};Username=${INVOICE_DB_USER:-invoice_user};Password=${INVOICE_DB_PASSWORD:-invoice_pass_123}
+      Jwt__Secret: ${JWT_SECRET:-THIS_IS_A_DEVELOPMENT_SECRET_KEY_CHANGE_ME_123456789}
+      Jwt__Issuer: ${JWT_ISSUER:-InvoiceManagementProject}
+      Jwt__Audience: ${JWT_AUDIENCE:-InvoiceManagementProjectUsers}
+    ports:
+      - "5003:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/backend/api-gateway/Dockerfile
+    container_name: api_gateway
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+
+      ReverseProxy__Clusters__auth-cluster__Destinations__auth-service__Address: http://auth-service:8080/
+      ReverseProxy__Clusters__customers-cluster__Destinations__customer-service__Address: http://customer-service:8080/
+      ReverseProxy__Clusters__invoices-cluster__Destinations__invoice-service__Address: http://invoice-service:8080/
+    ports:
+      - "5000:8080"
+    depends_on:
+      - auth-service
+      - customer-service
+      - invoice-service
+    
+  frontend-angular:
+    build:
+      context: .
+      dockerfile: src/frontend-angular/Dockerfile
+    container_name: frontend_angular
+    ports:
+      - "4200:80"
+    depends_on:
+      - api-gateway
 
 volumes:
   postgres_data:

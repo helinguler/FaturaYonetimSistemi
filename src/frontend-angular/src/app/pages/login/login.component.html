@@ -1,0 +1,61 @@
+<div class="login-page d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow-sm login-card">
+    <div class="card-body p-4">
+      <h3 class="mb-1 text-center">Fatura Yönetim Sistemi</h3>
+      <p class="text-muted text-center mb-4">Hesabınıza giriş yaparak devam edin</p>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="login()" novalidate>
+        <div class="mb-3">
+          <label class="form-label">Kullanıcı Adı</label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="userName"
+            autocomplete="username"
+            [class.is-invalid]="hasError('userName')"
+          />
+
+          <div class="invalid-feedback" *ngIf="hasError('userName')">
+            Kullanıcı adı zorunludur.
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Şifre</label>
+          <input
+            type="password"
+            class="form-control"
+            formControlName="password"
+            autocomplete="current-password"
+            [class.is-invalid]="hasError('password')"
+          />
+
+          <div class="invalid-feedback" *ngIf="hasError('password')">
+            Şifre zorunludur.
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary w-100 mb-2"
+          [disabled]="isLoading"
+        >
+          {{ isLoading ? 'Lütfen bekleyin...' : 'Giriş Yap' }}
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-outline-secondary w-100"
+          [disabled]="isLoading"
+          (click)="register()"
+        >
+          Kayıt Ol
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

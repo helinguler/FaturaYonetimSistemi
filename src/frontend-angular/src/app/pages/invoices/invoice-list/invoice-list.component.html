@@ -1,0 +1,144 @@
+<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+  <div class="container">
+    <span class="navbar-brand fw-semibold">Invoice Management</span>
+
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-muted small">User: {{ userName }}</span>
+      <button class="btn btn-outline-danger btn-sm" (click)="logout()">
+        Logout
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-1">Invoices</h3>
+      <p class="text-muted mb-0">List, filter, update and delete invoices.</p>
+    </div>
+
+    <button class="btn btn-primary" (click)="goToCreate()">
+      + New Invoice
+    </button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Start date</label>
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="startDate"
+            (change)="loadInvoices()"
+          />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">End date</label>
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="endDate"
+            (change)="loadInvoices()"
+          />
+        </div>
+
+        <div class="col-md-4">
+          <button
+            class="btn btn-outline-primary w-100"
+            [disabled]="isLoading"
+            (click)="loadInvoices()"
+          >
+            {{ isLoading ? 'Loading...' : 'Filter invoices' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Invoice No</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th class="text-end">Total</th>
+              <th class="text-center">Lines</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngIf="isLoading">
+              <td colspan="6" class="text-center py-4 text-muted">
+                Loading invoices...
+              </td>
+            </tr>
+
+            <tr *ngIf="!isLoading && invoices.length === 0">
+              <td colspan="6" class="text-center py-4 text-muted">
+                No invoices found for selected date range.
+              </td>
+            </tr>
+
+            <tr
+              *ngFor="let invoice of invoices; trackBy: trackByInvoiceId"
+            >
+              <td class="fw-semibold">
+                {{ invoice.invoiceNumber }}
+              </td>
+
+              <td>
+                {{ getCustomerTitle(invoice.customerId) }}
+              </td>
+
+              <td>
+                {{ invoice.invoiceDate | date: 'yyyy-MM-dd' }}
+              </td>
+
+              <td class="text-end">
+                {{ invoice.totalAmount | number: '1.2-2' }}
+              </td>
+
+              <td class="text-center">
+                <span class="badge text-bg-secondary">
+                  {{ invoice.lines?.length || 0 }}
+                </span>
+              </td>
+
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-outline-primary me-2"
+                  (click)="goToEdit(invoice.invoiceId)"
+                >
+                  Edit
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="deleteInvoice(invoice)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

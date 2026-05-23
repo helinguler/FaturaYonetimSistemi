@@ -11,7 +11,7 @@ import {
   providedIn: 'root'
 })
 export class CustomerApiService {
-  private readonly apiUrl = 'http://localhost:7000/api/customers';
+  private readonly apiUrl = '/api/customers';
 
   constructor(private readonly http: HttpClient) {}
 

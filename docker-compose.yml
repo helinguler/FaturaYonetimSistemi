@@ -19,7 +19,7 @@ services:
       INVOICE_DB_USER: ${INVOICE_DB_USER:-invoice_user}
       INVOICE_DB_PASSWORD: ${INVOICE_DB_PASSWORD:-invoice_pass_123}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -36,7 +36,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@invoice.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin_pass_123}
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT:-5050}:80"
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,8 +109,6 @@ services:
       ReverseProxy__Clusters__auth-cluster__Destinations__auth-service__Address: http://auth-service:8080/
       ReverseProxy__Clusters__customers-cluster__Destinations__customer-service__Address: http://customer-service:8080/
       ReverseProxy__Clusters__invoices-cluster__Destinations__invoice-service__Address: http://invoice-service:8080/
-    ports:
-      - "7000:8080"
     depends_on:
       - auth-service
       - customer-service
@@ -122,7 +120,7 @@ services:
       dockerfile: src/frontend-angular/Dockerfile
     container_name: frontend_angular
     ports:
-      - "4200:80"
+      - "${FRONTEND_PORT:-4200}:80"
     depends_on:
       - api-gateway
 

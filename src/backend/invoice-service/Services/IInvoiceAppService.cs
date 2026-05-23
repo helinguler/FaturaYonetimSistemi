@@ -14,7 +14,12 @@ public interface IInvoiceAppService
     Task<bool> DeleteAsync(int invoiceId, int userId);
 
     // tarih aralığındaki faturaları
-    Task<List<InvoiceResponse>> ListAsync(DateTime startDate, DateTime endDate, int userId);
+    Task<List<InvoiceResponse>> ListAsync(
+    DateTime? startDate,
+    DateTime? endDate,
+    int? customerId,
+    bool allDates,
+    int userId);
 
     // belirli bir faturayı IDye göre getirme
     Task<InvoiceResponse?> GetByIdAsync(int invoiceId, int userId);

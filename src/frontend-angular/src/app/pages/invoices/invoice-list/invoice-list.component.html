@@ -1,11 +1,16 @@
 <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
   <div class="container">
-    <span class="navbar-brand fw-semibold">Invoice Management</span>
+    <span class="navbar-brand fw-semibold">Fatura Yönetim Sistemi</span>
 
     <div class="d-flex align-items-center gap-3">
-      <span class="text-muted small">User: {{ userName }}</span>
-      <button class="btn btn-outline-danger btn-sm" (click)="logout()">
-        Logout
+      <span class="text-muted small">Kullanıcı: {{ userName }}</span>
+
+      <button
+        type="button"
+        class="btn btn-outline-danger btn-sm"
+        (click)="logout()"
+      >
+        Çıkış Yap
       </button>
     </div>
   </div>
@@ -14,53 +19,133 @@
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h3 class="mb-1">Invoices</h3>
-      <p class="text-muted mb-0">List, filter, update and delete invoices.</p>
+      <h3 class="mb-1">Faturalar</h3>
+      <p class="text-muted mb-0">
+        Faturaları listele, filtrele, güncelle ve sil.
+      </p>
     </div>
 
-    <button class="btn btn-primary" (click)="goToCreate()">
-      + New Invoice
-    </button>
+    <div class="d-flex gap-2">
+      <button
+        type="button"
+        class="btn btn-outline-primary"
+        (click)="goToCustomers()"
+      >
+        Müşteriler
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="goToCreate()"
+      >
+        + Yeni Fatura Ekle
+      </button>
+    </div>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger">
+  <div
+    *ngIf="errorMessage"
+    class="alert alert-danger"
+  >
     {{ errorMessage }}
   </div>
 
-  <div *ngIf="successMessage" class="alert alert-success">
+  <div
+    *ngIf="successMessage"
+    class="alert alert-success"
+  >
     {{ successMessage }}
   </div>
 
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label">Start date</label>
+        <div class="col-md-3">
+          <label class="form-label">Başlangıç Tarihi</label>
+
           <input
             type="date"
             class="form-control"
             [(ngModel)]="startDate"
-            (change)="loadInvoices()"
+            [disabled]="allDates"
+            name="startDate"
           />
         </div>
 
-        <div class="col-md-4">
-          <label class="form-label">End date</label>
+        <div class="col-md-3">
+          <label class="form-label">Bitiş Tarihi</label>
+
           <input
             type="date"
             class="form-control"
             [(ngModel)]="endDate"
-            (change)="loadInvoices()"
+            [disabled]="allDates"
+            name="endDate"
           />
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <label class="form-label">Müşteri</label>
+
+          <select
+            class="form-select"
+            [(ngModel)]="selectedCustomerId"
+            name="selectedCustomerId"
+          >
+            <option [ngValue]="null">Tüm müşteriler</option>
+
+            <option
+              *ngFor="let customer of customers"
+              [ngValue]="customer.customerId"
+            >
+              {{ customer.title }}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
           <button
+            type="button"
             class="btn btn-outline-primary w-100"
             [disabled]="isLoading"
             (click)="loadInvoices()"
           >
-            {{ isLoading ? 'Loading...' : 'Filter invoices' }}
+            {{ isLoading ? 'Yükleniyor...' : 'Faturaları filtrele' }}
+          </button>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-check">
+            <input
+              id="allDates"
+              type="checkbox"
+              class="form-check-input"
+              [(ngModel)]="allDates"
+              name="allDates"
+              (ngModelChange)="onAllDatesChanged()"
+            />
+
+            <label
+              class="form-check-label"
+              for="allDates"
+            >
+              Tüm tarihleri göster
+            </label>
+          </div>
+
+          <small class="text-muted">
+            Seçildiğinde tarih aralığı dikkate alınmaz ve tüm faturalar listelenir.
+          </small>
+        </div>
+
+        <div class="col-md-6 text-md-end">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="clearFilters()"
+          >
+            Filtreleri sıfırla
           </button>
         </div>
       </div>
@@ -73,31 +158,35 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>Invoice No</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th class="text-end">Total</th>
-              <th class="text-center">Lines</th>
-              <th class="text-end">Actions</th>
+              <th>Fatura No</th>
+              <th>Müşteri</th>
+              <th>Tarih</th>
+              <th class="text-end">Toplam</th>
+              <th class="text-center">Satır</th>
+              <th class="text-end">İşlemler</th>
             </tr>
           </thead>
 
           <tbody>
             <tr *ngIf="isLoading">
-              <td colspan="6" class="text-center py-4 text-muted">
-                Loading invoices...
+              <td
+                colspan="6"
+                class="text-center py-4 text-muted"
+              >
+                Faturalar yükleniyor...
               </td>
             </tr>
 
             <tr *ngIf="!isLoading && invoices.length === 0">
-              <td colspan="6" class="text-center py-4 text-muted">
-                No invoices found for selected date range.
+              <td
+                colspan="6"
+                class="text-center py-4 text-muted"
+              >
+                Seçili filtrelere uygun fatura bulunamadı.
               </td>
             </tr>
 
-            <tr
-              *ngFor="let invoice of invoices; trackBy: trackByInvoiceId"
-            >
+            <tr *ngFor="let invoice of invoices; trackBy: trackByInvoiceId">
               <td class="fw-semibold">
                 {{ invoice.invoiceNumber }}
               </td>
@@ -122,22 +211,161 @@
 
               <td class="text-end">
                 <button
-                  class="btn btn-sm btn-outline-primary me-2"
-                  (click)="goToEdit(invoice.invoiceId)"
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary me-2"
+                  (click)="openPreview(invoice)"
                 >
-                  Edit
+                  Görüntüle
                 </button>
 
                 <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary me-2"
+                  (click)="goToEdit(invoice.invoiceId)"
+                >
+                  Düzenle
+                </button>
+
+                <button
+                  type="button"
                   class="btn btn-sm btn-outline-danger"
                   (click)="deleteInvoice(invoice)"
                 >
-                  Delete
+                  Sil
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <div
+    *ngIf="selectedInvoice as invoice"
+    class="modal-backdrop-custom"
+    (click)="closePreview()"
+  >
+    <div
+      class="invoice-preview-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Fatura Önizleme</h4>
+
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close"
+          (click)="closePreview()"
+        ></button>
+      </div>
+
+      <div class="invoice-paper">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+          <div>
+            <h2 class="mb-1">INVOICE</h2>
+            <div class="text-muted">Invoice Management System</div>
+          </div>
+
+          <div class="text-end">
+            <div class="fw-semibold">Fatura No</div>
+            <div>{{ invoice.invoiceNumber }}</div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-7">
+            <div class="text-muted small">Müşteri</div>
+
+            <div class="fw-semibold">
+              {{ getCustomerTitle(invoice.customerId) }}
+            </div>
+
+            <div class="small mt-1">
+              Vergi No: {{ getCustomerTaxNumber(invoice.customerId) }}
+            </div>
+
+            <div class="small">
+              Email: {{ getCustomerEmail(invoice.customerId) }}
+            </div>
+
+            <div class="small">
+              Adres: {{ getCustomerAddress(invoice.customerId) }}
+            </div>
+          </div>
+
+          <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <div class="text-muted small">Fatura Tarihi</div>
+
+            <div class="fw-semibold">
+              {{ formatDate(invoice.invoiceDate) }}
+            </div>
+
+            <div class="text-muted small mt-2">Kayıt Tarihi</div>
+
+            <div>
+              {{ formatDate(invoice.recordDate) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Ürün / Hizmet</th>
+                <th class="text-end">Miktar</th>
+                <th class="text-end">Fiyat</th>
+                <th class="text-end">Toplam</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let line of invoice.lines">
+                <td>{{ line.itemName }}</td>
+                <td class="text-end">{{ line.quantity }}</td>
+                <td class="text-end">{{ line.price | number: '1.2-2' }}</td>
+                <td class="text-end">
+                  {{ line.lineTotal | number: '1.2-2' }}
+                </td>
+              </tr>
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <th
+                  colspan="3"
+                  class="text-end"
+                >
+                  Genel Toplam
+                </th>
+
+                <th class="text-end">
+                  {{ invoice.totalAmount | number: '1.2-2' }}
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="closePreview()"
+        >
+          Kapat
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="downloadInvoicePdf(invoice)"
+        >
+          PDF İndir
+        </button>
       </div>
     </div>
   </div>

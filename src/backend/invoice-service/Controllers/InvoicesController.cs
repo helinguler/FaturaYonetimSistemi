@@ -89,21 +89,29 @@ public class InvoicesController : ControllerBase
 
     [HttpGet("list")]
     public async Task<ActionResult<List<InvoiceResponse>>> InvoiceList(
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate)
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] int? customerId,
+        [FromQuery] bool allDates = false)
     {
         try
         {
             var userId = GetCurrentUserId();
 
-            var invoices = await _invoiceAppService.ListAsync(startDate, endDate, userId);
+            var invoices = await _invoiceAppService.ListAsync(
+                startDate,
+                endDate,
+                customerId,
+                allDates,
+                userId
+            );
 
             return Ok(invoices);
         }
         catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
-        }
+            }
     }
 
     [HttpGet("{id:int}")]

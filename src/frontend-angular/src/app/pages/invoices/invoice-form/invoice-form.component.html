@@ -1,9 +1,9 @@
 <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
   <div class="container">
-    <span class="navbar-brand fw-semibold">Invoice Management</span>
+    <span class="navbar-brand fw-semibold">Fatura Yönetim Sistemi</span>
 
     <button class="btn btn-outline-secondary btn-sm" type="button" (click)="cancel()">
-      Back to invoices
+      Faturalara dön
     </button>
   </div>
 </nav>
@@ -16,7 +16,9 @@
       </h3>
 
       <p class="text-muted mb-0">
-        {{ isEditMode ? 'Update invoice details and lines.' : 'Create a new invoice with line items.' }}
+        {{
+          isEditMode ? 'Fatura detaylarını ve satırlarını güncelleyin.' : 'Kalem kalem detaylandırılmış yeni bir fatura oluşturun.'
+        }}
       </p>
     </div>
   </div>
@@ -31,22 +33,18 @@
 
   <div *ngIf="isLoading" class="alert alert-info d-flex align-items-center gap-2">
     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    <span>Loading invoice...</span>
+    <span>Fatura yükleniyor...</span>
   </div>
 
-  <form
-    [formGroup]="invoiceForm"
-    (ngSubmit)="save()"
-    novalidate
-  >
+  <form [formGroup]="invoiceForm" (ngSubmit)="save()" novalidate>
     <fieldset [disabled]="isLoading || isSaving">
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h5 class="mb-3">Invoice Information</h5>
+          <h5 class="mb-3">Fatura Bilgisi</h5>
 
           <div class="row g-3">
             <div class="col-md-4">
-              <label for="customerId" class="form-label">Customer</label>
+              <label for="customerId" class="form-label">Müşteri</label>
 
               <select
                 id="customerId"
@@ -54,27 +52,32 @@
                 formControlName="customerId"
                 [class.is-invalid]="hasControlError('customerId')"
               >
-                <option [ngValue]="null">Select customer</option>
+                <option [ngValue]="null">Müşteri seç</option>
 
-                <option
-                  *ngFor="let customer of customers"
-                  [ngValue]="customer.customerId"
-                >
+                <option *ngFor="let customer of customers" [ngValue]="customer.customerId">
                   {{ customer.title }} - {{ customer.taxNumber }}
                 </option>
               </select>
 
-              <div class="invalid-feedback">
-                Customer is required.
-              </div>
+              <div class="invalid-feedback">Müşteri gereklidir.</div>
 
-              <small *ngIf="!isLoading && customers.length === 0" class="text-muted d-block mt-1">
-                No customers found.
-              </small>
+              <div *ngIf="customers.length === 0" class="mt-2">
+                <small class="text-muted d-block mb-2">
+                  Müşteri bulunamadı. Lütfen öncelikle müşteri oluşturun.
+                </small>
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  (click)="goToCustomers()"
+                >
+                  Müşterileri yönet
+                </button>
+              </div>
             </div>
 
             <div class="col-md-4">
-              <label for="invoiceNumber" class="form-label">Invoice number</label>
+              <label for="invoiceNumber" class="form-label">Fatura Numarası</label>
 
               <input
                 id="invoiceNumber"
@@ -85,13 +88,11 @@
                 [class.is-invalid]="hasControlError('invoiceNumber')"
               />
 
-              <div class="invalid-feedback">
-                Invoice number is required.
-              </div>
+              <div class="invalid-feedback">Fatura numarası gereklidir.</div>
             </div>
 
             <div class="col-md-4">
-              <label for="invoiceDate" class="form-label">Invoice date</label>
+              <label for="invoiceDate" class="form-label">Fatura Tarihi</label>
 
               <input
                 id="invoiceDate"
@@ -101,9 +102,7 @@
                 [class.is-invalid]="hasControlError('invoiceDate')"
               />
 
-              <div class="invalid-feedback">
-                Invoice date is required.
-              </div>
+              <div class="invalid-feedback">Fatura tarihi gereklidir.</div>
             </div>
           </div>
         </div>
@@ -112,7 +111,7 @@
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Invoice Lines</h5>
+            <h5 class="mb-0">Fatura Satırları</h5>
 
             <button
               type="button"
@@ -120,7 +119,7 @@
               (click)="addLine()"
               [disabled]="isLoading || isSaving"
             >
-              + Add Line
+              + Satır Ekle
             </button>
           </div>
 
@@ -131,7 +130,7 @@
               [formGroupName]="i"
             >
               <div class="col-md-4">
-                <label class="form-label">Item name</label>
+                <label class="form-label">Ürün Adı</label>
 
                 <input
                   type="text"
@@ -141,13 +140,11 @@
                   [class.is-invalid]="hasLineError(i, 'itemName')"
                 />
 
-                <div class="invalid-feedback">
-                  Item name is required.
-                </div>
+                <div class="invalid-feedback">Ürün adı gereklidir.</div>
               </div>
 
               <div class="col-md-2">
-                <label class="form-label">Quantity</label>
+                <label class="form-label">Miktar</label>
 
                 <input
                   type="number"
@@ -158,13 +155,11 @@
                   [class.is-invalid]="hasLineError(i, 'quantity')"
                 />
 
-                <div class="invalid-feedback">
-                  Quantity must be greater than zero.
-                </div>
+                <div class="invalid-feedback">Miktar sıfırdan büyük olmalıdır.</div>
               </div>
 
               <div class="col-md-2">
-                <label class="form-label">Price</label>
+                <label class="form-label">Ücret</label>
 
                 <input
                   type="number"
@@ -175,13 +170,11 @@
                   [class.is-invalid]="hasLineError(i, 'price')"
                 />
 
-                <div class="invalid-feedback">
-                  Price cannot be negative.
-                </div>
+                <div class="invalid-feedback">Ücret negatif olamaz.</div>
               </div>
 
               <div class="col-md-2">
-                <label class="form-label">Line total</label>
+                <label class="form-label">Satır Toplamı</label>
 
                 <div class="form-control bg-light">
                   {{ getLineTotal(i) | number: '1.2-2' }}
@@ -195,7 +188,7 @@
                   (click)="removeLine(i)"
                   [disabled]="isLoading || isSaving"
                 >
-                  Remove
+                  Kaldır
                 </button>
               </div>
             </div>
@@ -203,7 +196,7 @@
 
           <div class="d-flex justify-content-end">
             <div class="border rounded px-4 py-3 bg-light text-end">
-              <div class="text-muted small">Total Amount</div>
+              <div class="text-muted small">Toplam Tutar</div>
 
               <div class="fs-4 fw-bold">
                 {{ getTotalAmount() | number: '1.2-2' }}
@@ -221,15 +214,11 @@
         (click)="cancel()"
         [disabled]="isSaving"
       >
-        Cancel
+        İptal Et
       </button>
 
-      <button
-        type="submit"
-        class="btn btn-primary"
-        [disabled]="isLoading || isSaving"
-      >
-        {{ isSaving ? 'Saving...' : isEditMode ? 'Update Invoice' : 'Save Invoice' }}
+      <button type="submit" class="btn btn-primary" [disabled]="isLoading || isSaving">
+        {{ isSaving ? 'Saving...' : isEditMode ? 'Faturayı Güncelle' : 'Faturayı Kaydet' }}
       </button>
     </div>
   </form>

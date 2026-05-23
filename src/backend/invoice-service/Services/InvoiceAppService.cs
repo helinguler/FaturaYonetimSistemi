@@ -115,38 +115,54 @@ public class InvoiceAppService : IInvoiceAppService
 
     // belirli tarih aralığındaki faturaları listeler
     public async Task<List<InvoiceResponse>> ListAsync(
-        DateTime startDate,
-        DateTime endDate,
-        int userId)
+    DateTime? startDate,
+    DateTime? endDate,
+    int? customerId,
+    bool allDates,
+    int userId)
+{
+    if (!allDates)
     {
-        if (startDate == default || endDate == default)
+        if (!startDate.HasValue || !endDate.HasValue)
         {
-            throw new ArgumentException("Başlangıç ​​ve bitiş tarihleri ​​gereklidir.");
+            throw new ArgumentException("Start date and end date are required.");
         }
 
-        if (startDate.Date > endDate.Date)
+        if (startDate.Value.Date > endDate.Value.Date)
         {
-            throw new ArgumentException("Başlangıç ​​tarihi bitiş tarihinden daha geç olamaz.");
+            throw new ArgumentException("Start date cannot be later than end date.");
         }
-
-        var start = startDate.Date;
-        var endExclusive = endDate.Date.AddDays(1); // bitiş gününü listeye dahil etme
-
-        var invoices = await _dbContext.Invoices
-            .AsNoTracking()
-            .Include(x => x.InvoiceLines)
-            .Where(x =>
-                x.UserId == userId &&
-                x.InvoiceDate >= start &&
-                x.InvoiceDate < endExclusive)
-            .OrderByDescending(x => x.InvoiceDate)
-            .ThenByDescending(x => x.InvoiceId) // aynı tarihte olanları ID’ye göre yeniden eskiye sıralar
-            .ToListAsync();
-
-        return invoices
-            .Select(InvoiceMapper.ToResponse)
-            .ToList();
     }
+
+    var query = _dbContext.Invoices
+        .AsNoTracking()
+        .Include(x => x.InvoiceLines)
+        .Where(x => x.UserId == userId);
+
+    if (!allDates && startDate.HasValue && endDate.HasValue)
+    {
+        var start = startDate.Value.Date;
+        var endExclusive = endDate.Value.Date.AddDays(1);
+
+        query = query.Where(x =>
+            x.InvoiceDate >= start &&
+            x.InvoiceDate < endExclusive);
+    }
+
+    if (customerId.HasValue && customerId.Value > 0)
+    {
+        query = query.Where(x => x.CustomerId == customerId.Value);
+    }
+
+    var invoices = await query
+        .OrderByDescending(x => x.InvoiceDate)
+        .ThenByDescending(x => x.InvoiceId)
+        .ToListAsync();
+
+    return invoices
+        .Select(InvoiceMapper.ToResponse)
+        .ToList();
+}
 
     // belirli IDye sahip faturayı getirir
     public async Task<InvoiceResponse?> GetByIdAsync(int invoiceId, int userId)

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using CustomerService.Data;
 using CustomerService.DTOs;
 using CustomerService.Models;
@@ -193,9 +194,11 @@ public class CustomersController : ControllerBase
             return "Vergi numarası gereklidir.";
         }
 
-        if (taxNumber.Length > 20)
+        var normalizedTaxNumber = taxNumber.Trim();
+
+        if (!Regex.IsMatch(normalizedTaxNumber, @"^\d{10,11}$"))
         {
-            return "Vergi numarası 20 karakteri geçemez.";
+            return "Tax number must be 10 or 11 digits.";
         }
 
         if (string.IsNullOrWhiteSpace(title))

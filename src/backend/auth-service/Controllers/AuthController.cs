@@ -31,9 +31,11 @@ public class AuthController : ControllerBase
             return BadRequest("Kullanıcı adı ve şifre gereklidir.");
         }
 
-        if (request.Password.Length < 8)
+        var passwordValidationError = ValidatePassword(request.Password);
+
+        if (passwordValidationError is not null)
         {
-            return BadRequest("Şifre en az 8 karakter uzunluğunda olmalıdır.");
+            return BadRequest(passwordValidationError);
         }
 
         var normalizedUserName = request.UserName.Trim();   // UserName boşluk temizleme
@@ -143,6 +145,42 @@ public class AuthController : ControllerBase
 
         return Ok();
     }
+
+    // password kontrolü
+    private static string? ValidatePassword(string password)
+{
+    if (string.IsNullOrWhiteSpace(password))
+    {
+        return "Şifre gereklidir.";
+    }
+
+    if (password.Length < 8)
+    {
+        return "Parola en az 8 karakter uzunluğunda olmalıdır.";
+    }
+
+    if (!password.Any(char.IsUpper))
+    {
+        return "Şifre en az bir büyük harf içermelidir.";
+    }
+
+    if (!password.Any(char.IsLower))
+    {
+        return "Şifre en az bir küçük harf içermelidir.";
+    }
+
+    if (!password.Any(char.IsDigit))
+    {
+        return "Parola en az bir rakam içermelidir.";
+    }
+
+    if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
+    {
+        return "Parola en az bir özel karakter içermelidir.";
+    }
+
+    return null;
+}
 
     // access token + refresh token üretip response dönme
     private async Task<AuthResponse> CreateAuthResponse(AppUser user)

@@ -4,21 +4,32 @@ import { Observable } from 'rxjs';
 import {
   InvoiceResponse,
   InvoiceSaveRequest,
-  InvoiceUpdateRequest
+  InvoiceUpdateRequest,
 } from '../models/invoice.models';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class InvoiceApiService {
   private readonly apiUrl = 'http://localhost:5000/api/invoices';
 
   constructor(private readonly http: HttpClient) {}
 
-  getInvoices(startDate: string, endDate: string): Observable<InvoiceResponse[]> {
-    const params = new HttpParams()
-      .set('startDate', startDate)
-      .set('endDate', endDate);
+  getInvoices(
+    startDate: string | null,
+    endDate: string | null,
+    customerId: number | null,
+    allDates: boolean,
+  ): Observable<InvoiceResponse[]> {
+    let params = new HttpParams().set('allDates', allDates);
+
+    if (!allDates && startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    }
+
+    if (customerId) {
+      params = params.set('customerId', customerId);
+    }
 
     return this.http.get<InvoiceResponse[]>(`${this.apiUrl}/list`, { params });
   }

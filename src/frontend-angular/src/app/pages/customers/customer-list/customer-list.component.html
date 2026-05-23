@@ -1,0 +1,182 @@
+<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+  <div class="container">
+    <span class="navbar-brand fw-semibold">Fatura Yönetim Sistemi</span>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary btn-sm" (click)="goToInvoices()">Faturalar</button>
+
+      <button class="btn btn-outline-danger btn-sm" (click)="logout()">Çıkış Yap</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <div class="mb-3">
+    <h3 class="mb-1">Müşteriler</h3>
+    <p class="text-muted mb-0">Faturalarda kullanılan müşteri kayıtlarını oluşturun, güncelleyin ve silin.</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-semibold">
+          {{ isEditMode ? 'Müşteriyi Düzenle' : 'Yeni Müşteri' }}
+        </div>
+
+        <div class="card-body">
+          <form [formGroup]="customerForm" (ngSubmit)="saveCustomer()">
+            <div class="mb-3">
+              <label class="form-label">Vergi Numarası</label>
+              <input
+                type="text"
+                class="form-control"
+                formControlName="taxNumber"
+                [class.is-invalid]="hasError('taxNumber')"
+              />
+
+              <div class="invalid-feedback">
+                <span *ngIf="customerForm.controls.taxNumber.errors?.['required']">
+                  Vergi numarası gereklidir.
+                </span>
+
+                <span *ngIf="customerForm.controls.taxNumber.errors?.['pattern']">
+                  Vergi numarası 10 veya 11 haneli olmalıdır.
+                </span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Başlık</label>
+              <input
+                type="text"
+                class="form-control"
+                formControlName="title"
+                [class.is-invalid]="hasError('title')"
+              />
+
+              <div class="invalid-feedback">Başlık gereklidir ve 200 karakteri geçmemelidir.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Adres</label>
+              <textarea
+                class="form-control"
+                rows="3"
+                formControlName="address"
+                [class.is-invalid]="hasError('address')"
+              ></textarea>
+
+              <div class="invalid-feedback">Adres en fazla 500 karakter uzunluğunda olabilir.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Email Adresi</label>
+              <input
+                type="email"
+                class="form-control"
+                formControlName="eMail"
+                [class.is-invalid]="hasError('eMail')"
+              />
+
+              <div class="invalid-feedback">Lütfen geçerli bir email adresi giriniz.</div>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+                {{ isSaving ? 'Saving...' : isEditMode ? 'Müşteri Güncelle' : 'Müşteri Kaydet' }}
+              </button>
+
+              <button type="button" class="btn btn-outline-secondary" (click)="resetForm()">
+                Temizle
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Müşteri Listesi</span>
+
+          <button
+            class="btn btn-sm btn-outline-primary"
+            [disabled]="isLoading"
+            (click)="loadCustomers()"
+          >
+            {{ isLoading ? 'Yükleniyor...' : 'Yenile' }}
+          </button>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Vergi Numarası</th>
+                  <th>Başlık</th>
+                  <th>Email Adresi</th>
+                  <th>Adres</th>
+                  <th class="text-end">İşlemler</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr *ngIf="isLoading">
+                  <td colspan="5" class="text-center text-muted py-4">Müşteriler yükleniyor...</td>
+                </tr>
+
+                <tr *ngIf="!isLoading && customers.length === 0">
+                  <td colspan="5" class="text-center text-muted py-4">Müşteri bulunamadı.</td>
+                </tr>
+
+                <tr *ngFor="let customer of customers">
+                  <td class="fw-semibold">
+                    {{ customer.taxNumber }}
+                  </td>
+
+                  <td>
+                    {{ customer.title }}
+                  </td>
+
+                  <td>
+                    {{ customer.eMail || '-' }}
+                  </td>
+
+                  <td>
+                    {{ customer.address || '-' }}
+                  </td>
+
+                  <td class="text-end">
+                    <button
+                      class="btn btn-sm btn-outline-primary me-2"
+                      (click)="editCustomer(customer)"
+                    >
+                      Düzenle
+                    </button>
+
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="deleteCustomer(customer)"
+                    >
+                      Sil
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

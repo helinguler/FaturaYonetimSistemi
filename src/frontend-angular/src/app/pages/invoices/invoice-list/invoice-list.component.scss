@@ -1,10 +1,37 @@
-.table {
-  th {
-    font-size: 0.875rem;
-    color: #495057;
+.modal-backdrop-custom {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background-color: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.invoice-preview-modal {
+  width: min(960px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+}
+
+.invoice-paper {
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 32px;
+}
+
+@media (max-width: 768px) {
+  .invoice-preview-modal {
+    padding: 16px;
   }
 
-  td {
-    font-size: 0.925rem;
+  .invoice-paper {
+    padding: 20px;
   }
 }

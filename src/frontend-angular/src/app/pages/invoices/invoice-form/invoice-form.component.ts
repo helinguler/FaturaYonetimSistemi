@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -10,237 +10,257 @@ import { CustomerApiService } from '../../../core/services/customer-api.service'
 import { InvoiceApiService } from '../../../core/services/invoice-api.service';
 
 @Component({
-  selector: 'app-invoice-form',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './invoice-form.component.html',
-  styleUrl: './invoice-form.component.scss',
+  selector: 'app-invoice-form',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './invoice-form.component.html',
+  styleUrl: './invoice-form.component.scss',
 })
 export class InvoiceFormComponent implements OnInit {
-  private readonly formBuilder = inject(FormBuilder);
-  private readonly customerApiService = inject(CustomerApiService);
-  private readonly invoiceApiService = inject(InvoiceApiService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly customerApiService = inject(CustomerApiService);
+  private readonly invoiceApiService = inject(InvoiceApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
-  customers: CustomerResponse[] = [];
+  customers: CustomerResponse[] = [];
 
-  invoiceId: number | null = null;
-  isEditMode = false;
-  isLoading = false;
-  isSaving = false;
+  invoiceId: number | null = null;
+  isEditMode = false;
+  isLoading = false;
+  isSaving = false;
 
-  errorMessage = '';
-  successMessage = '';
+  errorMessage = '';
+  successMessage = '';
 
-  invoiceForm = this.formBuilder.group({
-    customerId: [null as number | null, Validators.required],
-    invoiceNumber: ['', [Validators.required, Validators.maxLength(50)]],
-    invoiceDate: ['', Validators.required],
-    lines: this.formBuilder.array<FormGroup>([]),
-  });
+  invoiceForm = this.formBuilder.group({
+    customerId: [null as number | null, Validators.required],
+    invoiceNumber: ['', [Validators.required, Validators.maxLength(50)]],
+    invoiceDate: ['', Validators.required],
+    lines: this.formBuilder.array<FormGroup>([]),
+  });
 
-  ngOnInit(): void {
-    const idParam = this.route.snapshot.paramMap.get('id');
+  ngOnInit(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
 
-    if (idParam) {
-      this.invoiceId = Number(idParam);
-      this.isEditMode = true;
-    }
+    if (idParam) {
+      this.invoiceId = Number(idParam);
+      this.isEditMode = true;
+    }
 
-    this.loadCustomers();
+    this.loadCustomers();
 
-    if (this.isEditMode && this.invoiceId) {
-      this.loadInvoice(this.invoiceId);
-    } else {
-      this.addLine();
+    if (this.isEditMode && this.invoiceId) {
+      this.loadInvoice(this.invoiceId);
+    } else {
+      this.addLine();
 
-      this.invoiceForm.patchValue({
-        invoiceDate: this.toDateInputValue(new Date()),
-      });
-    }
-  }
+      this.invoiceForm.patchValue({
+        invoiceDate: this.toDateInputValue(new Date()),
+      });
+    }
+  }
 
-  get lines(): FormArray<FormGroup> {
-    return this.invoiceForm.controls.lines;
-  }
+  goToCustomers(): void {
+    this.router.navigate(['/customers']);
+  }
 
-  addLine(): void {
-    this.lines.push(
-      this.formBuilder.group({
-        itemName: ['', [Validators.required, Validators.maxLength(200)]],
-        quantity: [1, [Validators.required, Validators.min(0.01)]],
-        price: [0, [Validators.required, Validators.min(0)]],
-      }),
-    );
-  }
+  get lines(): FormArray<FormGroup> {
+    return this.invoiceForm.controls.lines;
+  }
 
-  removeLine(index: number): void {
-    if (this.lines.length === 1) {
-      this.errorMessage = 'At least one invoice line is required.';
-      return;
-    }
+  addLine(): void {
+    this.lines.push(
+      this.formBuilder.group({
+        itemName: ['', [Validators.required, Validators.maxLength(200)]],
+        quantity: [1, [Validators.required, Validators.min(0.01)]],
+        price: [0, [Validators.required, Validators.min(0)]],
+      }),
+    );
 
-    this.errorMessage = '';
-    this.lines.removeAt(index);
-  }
+    this.changeDetectorRef.detectChanges();
+  }
 
-  getLineTotal(index: number): number {
-    const line = this.lines.at(index);
-    const quantity = Number(line.get('quantity')?.value || 0);
-    const price = Number(line.get('price')?.value || 0);
+  removeLine(index: number): void {
+    if (this.lines.length === 1) {
+      this.errorMessage = 'At least one invoice line is required.';
+      return;
+    }
 
-    return quantity * price;
-  }
+    this.errorMessage = '';
+    this.lines.removeAt(index);
 
-  getTotalAmount(): number {
-    return this.lines.controls.reduce((total, _, index) => {
-      return total + this.getLineTotal(index);
-    }, 0);
-  }
+    this.changeDetectorRef.detectChanges();
+  }
 
-  save(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
+  getLineTotal(index: number): number {
+    const line = this.lines.at(index);
+    const quantity = Number(line.get('quantity')?.value || 0);
+    const price = Number(line.get('price')?.value || 0);
 
-    if (this.invoiceForm.invalid) {
-      this.invoiceForm.markAllAsTouched();
-      this.errorMessage = 'Please fill all required invoice fields.';
-      return;
-    }
+    return quantity * price;
+  }
 
-    const request = this.buildRequest();
+  getTotalAmount(): number {
+    return this.lines.controls.reduce((total, _, index) => {
+      return total + this.getLineTotal(index);
+    }, 0);
+  }
 
-    this.isSaving = true;
+  save(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
 
-    const operation =
-      this.isEditMode && this.invoiceId
-        ? this.invoiceApiService.updateInvoice(this.invoiceId, request as InvoiceUpdateRequest)
-        : this.invoiceApiService.saveInvoice(request as InvoiceSaveRequest);
+    if (this.invoiceForm.invalid) {
+      this.invoiceForm.markAllAsTouched();
+      this.errorMessage = 'Please fill all required invoice fields.';
+      return;
+    }
 
-    operation.pipe(finalize(() => (this.isSaving = false))).subscribe({
-      next: () => {
-        this.successMessage = this.isEditMode
-          ? 'Invoice updated successfully.'
-          : 'Invoice created successfully.';
+    const request = this.buildRequest();
 
-        this.router.navigate(['/invoices']);
-      },
-      error: (error) => {
-        this.errorMessage = this.getErrorMessage(error);
-      },
-    });
-  }
+    this.isSaving = true;
 
-  cancel(): void {
-    this.router.navigate(['/invoices']);
-  }
+    const operation =
+      this.isEditMode && this.invoiceId
+        ? this.invoiceApiService.updateInvoice(this.invoiceId, request as InvoiceUpdateRequest)
+        : this.invoiceApiService.saveInvoice(request as InvoiceSaveRequest);
 
-  hasControlError(controlName: 'customerId' | 'invoiceNumber' | 'invoiceDate'): boolean {
-    const control = this.invoiceForm.controls[controlName];
+    operation.pipe(finalize(() => (this.isSaving = false))).subscribe({
+      next: () => {
+        this.successMessage = this.isEditMode
+          ? 'Invoice updated successfully.'
+          : 'Invoice created successfully.';
 
-    return control.invalid && (control.touched || control.dirty);
-  }
+        this.router.navigate(['/invoices']);
+      },
+      error: (error) => {
+        this.errorMessage = this.getErrorMessage(error);
+      },
+    });
+  }
 
-  hasLineError(index: number, controlName: 'itemName' | 'quantity' | 'price'): boolean {
-    const control = this.lines.at(index).get(controlName);
+  cancel(): void {
+    this.router.navigate(['/invoices']);
+  }
 
-    return !!control && control.invalid && (control.touched || control.dirty);
-  }
+  hasControlError(controlName: 'customerId' | 'invoiceNumber' | 'invoiceDate'): boolean {
+    const control = this.invoiceForm.controls[controlName];
 
-  private loadCustomers(): void {
-    this.customerApiService.getCustomers().subscribe({
-      next: (customers) => {
-        this.customers = customers;
-      },
-      error: (error) => {
-        this.errorMessage = this.getErrorMessage(error);
-      },
-    });
-  }
+    return control.invalid && (control.touched || control.dirty);
+  }
 
-  private loadInvoice(invoiceId: number): void {
-    this.isLoading = true;
+  hasLineError(index: number, controlName: 'itemName' | 'quantity' | 'price'): boolean {
+    const control = this.lines.at(index).get(controlName);
 
-    this.invoiceApiService
-      .getInvoiceById(invoiceId)
-      .pipe(finalize(() => (this.isLoading = false)))
-      .subscribe({
-        next: (invoice) => {
-          this.lines.clear();
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
 
-          for (const line of invoice.lines ?? []) {
-            this.lines.push(
-              this.formBuilder.group({
-                itemName: [line.itemName, [Validators.required, Validators.maxLength(200)]],
-                quantity: [line.quantity, [Validators.required, Validators.min(0.01)]],
-                price: [line.price, [Validators.required, Validators.min(0)]],
-              }),
-            );
-          }
+  private loadCustomers(): void {
+    this.customerApiService.getCustomers().subscribe({
+      next: (customers) => {
+        this.customers = [...customers];
+        this.changeDetectorRef.detectChanges();
+      },
+      error: (error) => {
+        this.errorMessage = this.getErrorMessage(error);
+        this.changeDetectorRef.detectChanges();
+      },
+    });
+  }
 
-          if (this.lines.length === 0) {
-            this.addLine();
-          }
+  private loadInvoice(invoiceId: number): void {
+    this.isLoading = true;
+    this.changeDetectorRef.detectChanges();
 
-          this.invoiceForm.patchValue({
-            customerId: invoice.customerId,
-            invoiceNumber: invoice.invoiceNumber,
-            invoiceDate: this.toDateInputValue(new Date(invoice.invoiceDate)),
-          });
-        },
-        error: (error) => {
-          this.errorMessage = this.getErrorMessage(error);
-        },
-      });
-  }
+    this.invoiceApiService
+      .getInvoiceById(invoiceId)
+      .pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.changeDetectorRef.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: (invoice) => {
+          this.lines.clear();
 
-  private buildRequest(): InvoiceSaveRequest | InvoiceUpdateRequest {
-    const formValue = this.invoiceForm.getRawValue();
+          for (const line of invoice.lines ?? []) {
+            this.lines.push(
+              this.formBuilder.group({
+                itemName: [line.itemName, [Validators.required, Validators.maxLength(200)]],
+                quantity: [line.quantity, [Validators.required, Validators.min(0.01)]],
+                price: [line.price, [Validators.required, Validators.min(0)]],
+              }),
+            );
+          }
 
-    const lines = formValue.lines as Array<{
-      itemName: string | null;
-      quantity: number | null;
-      price: number | null;
-    }>;
+          if (this.lines.length === 0) {
+            this.addLine();
+          }
 
-    return {
-      customerId: Number(formValue.customerId),
-      invoiceNumber: formValue.invoiceNumber!.trim(),
-      invoiceDate: formValue.invoiceDate!,
-      lines: lines.map((line) => ({
-        itemName: line.itemName!.trim(),
-        quantity: Number(line.quantity),
-        price: Number(line.price),
-      })),
-    };
-  }
+          this.invoiceForm.patchValue({
+            customerId: invoice.customerId,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceDate: this.toDateInputValue(new Date(invoice.invoiceDate)),
+          });
 
-  private toDateInputValue(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+          this.changeDetectorRef.detectChanges();
+        },
+        error: (error) => {
+          this.errorMessage = this.getErrorMessage(error);
+          this.changeDetectorRef.detectChanges();
+        },
+      });
+  }
 
-    return `${year}-${month}-${day}`;
-  }
+  private buildRequest(): InvoiceSaveRequest | InvoiceUpdateRequest {
+    const formValue = this.invoiceForm.getRawValue();
 
-  private getErrorMessage(error: any): string {
-    if (typeof error?.error === 'string' && error.error.trim()) {
-      return error.error;
-    }
+    const lines = formValue.lines as Array<{
+      itemName: string | null;
+      quantity: number | null;
+      price: number | null;
+    }>;
 
-    if (error?.status === 401) {
-      return 'Session expired. Please login again.';
-    }
+    return {
+      customerId: Number(formValue.customerId),
+      invoiceNumber: formValue.invoiceNumber!.trim(),
+      invoiceDate: formValue.invoiceDate!,
+      lines: lines.map((line) => ({
+        itemName: line.itemName!.trim(),
+        quantity: Number(line.quantity),
+        price: Number(line.price),
+      })),
+    };
+  }
 
-    if (error?.status === 409) {
-      return 'Invoice number already exists.';
-    }
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
 
-    if (error?.status === 0) {
-      return 'API connection failed. Please make sure backend services are running.';
-    }
+    return `${year}-${month}-${day}`;
+  }
 
-    return 'Something went wrong. Please try again.';
-  }
+  private getErrorMessage(error: any): string {
+    if (typeof error?.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    if (error?.status === 401) {
+      return 'Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.';
+    }
+
+    if (error?.status === 409) {
+      return 'Fatura numarası zaten mevcut.';
+    }
+
+    if (error?.status === 0) {
+      return 'API bağlantısı başarısız oldu. Lütfen backend servislerinin çalıştığından emin olun.';
+    }
+
+    return 'Bir sorun oluştu. Lütfen tekrar deneyin.';
+  }
 }
